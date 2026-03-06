@@ -1,4 +1,4 @@
--- [[ Ktzk Speed & Utility Panel - Confirmation Update ]] --
+
 
 local ScreenGui = Instance.new("ScreenGui")
 local MainFrame = Instance.new("Frame")
@@ -7,7 +7,13 @@ local Title = Instance.new("TextLabel")
 local CloseBtn = Instance.new("TextButton")
 local MinimizeBtn = Instance.new("TextButton")
 local SpeedSection = Instance.new("ScrollingFrame")
-local Bindable = Instance.new("BindableFunction") -- Onay mekanizması için gerekli
+local Bindable = Instance.new("BindableFunction")
+
+
+local Noclip = false
+local Flying = false
+local FlySpeed = 50
+local LP = game.Players.LocalPlayer
 
 -- Ana Ayarlar
 ScreenGui.Parent = game.CoreGui
@@ -28,7 +34,7 @@ Logo.Parent = MainFrame
 Logo.BackgroundTransparency = 1
 Logo.Position = UDim2.new(0.04, 0, 0.02, 0)
 Logo.Size = UDim2.new(0, 30, 0, 30)
-Logo.Image = "rbxassetid://16120516625" 
+Logo.Image = "rbxassetid://121722555104963" 
 Logo.ScaleType = Enum.ScaleType.Fit
 
 -- Başlık
@@ -37,7 +43,7 @@ Title.BackgroundTransparency = 1
 Title.Position = UDim2.new(0.18, 0, 0, 0)
 Title.Size = UDim2.new(0, 130, 0, 40)
 Title.Font = Enum.Font.GothamBold
-Title.Text = "Ktzk Utility"
+Title.Text = "Ktzk Hack V13"
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextSize = 14
 Title.TextXAlignment = Enum.TextXAlignment.Left
@@ -53,11 +59,11 @@ SpeedSection.Parent = MainFrame
 SpeedSection.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 SpeedSection.Position = UDim2.new(0.05, 0, 0.15, 0)
 SpeedSection.Size = UDim2.new(0, 235, 0, 260)
-SpeedSection.CanvasSize = UDim2.new(0, 0, 1.3, 0)
+SpeedSection.CanvasSize = UDim2.new(0, 0, 1.8, 0) -- İçerik arttığı için artırıldı
 SpeedSection.ScrollBarThickness = 2
 SpeedSection.BackgroundTransparency = 1
 
--- Kapatma ve Küçültme Butonları
+-- Kapatma ve Küçültme Butonları (Apple Stili)
 CloseBtn.Name = "CloseBtn"
 CloseBtn.Parent = MainFrame
 CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 80, 80)
@@ -74,47 +80,64 @@ MinimizeBtn.Size = UDim2.new(0, 20, 0, 20)
 MinimizeBtn.Text = ""
 Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(1, 0)
 
--- [[ ONAY MEKANİZMASI VE KAPATMA SİSTEMİ ]] --
-Bindable.OnInvoke = function(response)
-    if response == "Evet" then
-        ScreenGui:Destroy() -- Hileyi tamamen kapat
+-- [[ ÖZELLİK FONKSİYONLARI ]] --
+
+-- Noclip Mantığı
+game:GetService("RunService").Stepped:Connect(function()
+    if Noclip and LP.Character then
+        for _, v in pairs(LP.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+    end
+end)
+
+-- Fly Mantığı
+local function ToggleFly()
+    Flying = not Flying
+    local char = LP.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    if Flying then
+        local bg = Instance.new("BodyGyro", hrp)
+        local bv = Instance.new("BodyVelocity", hrp)
+        bg.P = 9e4; bg.MaxTorque = Vector3.new(9e9, 9e9, 9e9); bg.CFrame = hrp.CFrame
+        bv.Velocity = Vector3.new(0,0.1,0); bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        task.spawn(function()
+            while Flying do
+                game:GetService("RunService").RenderStepped:Wait()
+                bv.Velocity = workspace.CurrentCamera.CFrame.LookVector * FlySpeed
+                bg.CFrame = workspace.CurrentCamera.CFrame
+            end
+            bg:Destroy(); bv:Destroy()
+        end)
     end
 end
 
-CloseBtn.MouseButton1Click:Connect(function()
+-- InvisFling Mantığı
+local function DoInvisFling()
+    local char = LP.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+    
+    local bav = Instance.new("BodyAngularVelocity", hrp)
+    bav.AngularVelocity = Vector3.new(0, 99999, 0)
+    bav.MaxTorque = Vector3.new(0, 99999, 0)
+    bav.P = 1250
+    
     game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Kapatma Onayı",
-        Text = "Hileyi kapatmak istediğinize emin misiniz?",
-        Icon = "rbxassetid://16120516625",
-        Duration = 5,
-        Callback = Bindable, -- Butonlara basıldığında Bindable çalışır
-        Button1 = "Evet",
-        Button2 = "Hayır"
-    })
-end)
-
--- FONKSİYONLAR
-local function giveTeleportTool()
-    local mouse = game.Players.LocalPlayer:GetMouse()
-    local tool = Instance.new("Tool")
-    tool.RequiresHandle = false
-    tool.Name = "Click TP (Ktzk)"
-    tool.Activated:Connect(function()
-        local pos = mouse.Hit.p
-        local char = game.Players.LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-        end
-    end)
-    tool.Parent = game.Players.LocalPlayer.Backpack
-    game:GetService("StarterGui"):SetCore("SendNotification", {
-        Title = "Ktzk Utility",
-        Text = "Teleport Tool eklendi!",
+        Title = "Ktzk Fling",
+        Text = "InvisFling Aktif!",
         Icon = "rbxassetid://16120516625",
         Duration = 2
     })
+    
+    wait(2)
+    bav:Destroy()
 end
 
+-- [[ BUTON OLUŞTURMA ]] --
 local function createBtn(text, func, color)
     local btn = Instance.new("TextButton")
     btn.Parent = SpeedSection
@@ -126,16 +149,51 @@ local function createBtn(text, func, color)
     btn.TextSize = 13
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     btn.MouseButton1Click:Connect(func)
+    return btn
 end
 
--- Butonlar
-createBtn("Normal Hız (16)", function() game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16 end)
-createBtn("Hız: 30", function() game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 30 end)
-createBtn("Hız: 50", function() game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 50 end)
-createBtn("Hız: 100", function() game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 100 end)
-createBtn("Teleport Tool Al", giveTeleportTool, Color3.fromRGB(0, 120, 215))
+-- Butonları Ekle
+createBtn("Normal Hız (16)", function() LP.Character.Humanoid.WalkSpeed = 16 end)
+createBtn("Hız: 100", function() LP.Character.Humanoid.WalkSpeed = 100 end)
 
--- Küçültme Mantığı
+local flyBtn = createBtn("Fly (Uçma): KAPALI", function()
+    ToggleFly()
+    flyBtn.Text = Flying and "Fly: AÇIK" or "Fly: KAPALI"
+    flyBtn.BackgroundColor3 = Flying and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
+end)
+
+local noclipBtn = createBtn("Noclip: KAPALI", function()
+    Noclip = not Noclip
+    noclipBtn.Text = Noclip and "Noclip: AÇIK" or "Noclip: KAPALI"
+    noclipBtn.BackgroundColor3 = Noclip and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(45, 45, 45)
+end)
+
+createBtn("InvisFling Kullan", DoInvisFling, Color3.fromRGB(150, 50, 150))
+createBtn("Teleport Tool Al", function()
+    local mouse = LP:GetMouse()
+    local tool = Instance.new("Tool")
+    tool.RequiresHandle = false
+    tool.Name = "Click TP (Ktzk)"
+    tool.Activated:Connect(function()
+        if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+            LP.Character.HumanoidRootPart.CFrame = CFrame.new(mouse.Hit.p + Vector3.new(0, 3, 0))
+        end
+    end)
+    tool.Parent = LP.Backpack
+end, Color3.fromRGB(0, 120, 215))
+
+-- [[ KAPATMA VE KÜÇÜLTME MANTIĞI ]] --
+Bindable.OnInvoke = function(res) if res == "Evet" then ScreenGui:Destroy() end end
+CloseBtn.MouseButton1Click:Connect(function()
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Kapatma Onayı",
+        Text = "Emin misiniz?",
+        Icon = "rbxassetid://121722555104963",
+        Callback = Bindable,
+        Button1 = "Evet", Button2 = "Hayır"
+    })
+end)
+
 local minimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
